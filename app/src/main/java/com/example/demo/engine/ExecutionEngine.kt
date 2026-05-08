@@ -59,6 +59,9 @@ class ExecutionEngine(
         MutableSharedFlow<LogEvent>(replay = 0, extraBufferCapacity = 256)
     val logEvents: SharedFlow<LogEvent> = _logEvents.asSharedFlow()
 
+    private val _logClearEvents = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 4)
+    val logClearEvents: SharedFlow<Unit> = _logClearEvents.asSharedFlow()
+
     fun startTask(taskId: Long) {
         if (jobs.containsKey(taskId)) return
         val job = scope.launch {
@@ -101,6 +104,12 @@ class ExecutionEngine(
     }
 
     fun getCircuitBreakerState() = circuitBreaker.state
+
+    fun notifyLogsCleared() {
+        scope.launch {
+            _logClearEvents.emit(Unit)
+        }
+    }
 
     private suspend fun executeTask(taskId: Long) {
         val task = taskRepository.getById(taskId) ?: return

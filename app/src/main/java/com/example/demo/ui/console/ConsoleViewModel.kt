@@ -37,12 +37,19 @@ class ConsoleViewModel : ViewModel() {
                 _logs.value = if (list.size > 500) list.take(500) else list
             }
         }
+
+        viewModelScope.launch {
+            engine.logClearEvents.collect {
+                _logs.value = emptyList()
+            }
+        }
     }
 
     fun clearLogs() {
         viewModelScope.launch {
             logRepo.clearAll()
             _logs.value = emptyList()
+            engine.notifyLogsCleared()
         }
     }
 

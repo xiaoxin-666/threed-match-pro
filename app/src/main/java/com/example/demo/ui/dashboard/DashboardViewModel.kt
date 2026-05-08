@@ -45,6 +45,7 @@ class DashboardViewModel : ViewModel() {
     fun clearAllLogs() {
         viewModelScope.launch {
             logRepo.clearAll()
+            engine.notifyLogsCleared()
         }
     }
 }
