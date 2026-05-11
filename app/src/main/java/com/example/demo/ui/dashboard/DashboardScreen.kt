@@ -1,5 +1,11 @@
 package com.example.demo.ui.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
@@ -25,7 +35,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,9 +47,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.demo.data.local.entity.TaskEntity
@@ -56,6 +73,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
     var showStopAllDialog by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
 
+    // Query state
+    val queryGoodsId by viewModel.queryGoodsId.collectAsStateWithLifecycle()
+    val queryResult by viewModel.queryResult.collectAsStateWithLifecycle()
+    val queryLoading by viewModel.queryLoading.collectAsStateWithLifecycle()
+    val queryError by viewModel.queryError.collectAsStateWithLifecycle()
+    val focusManager = LocalFocusManager.current
+
     val progressPercent = (progress * 100f).toInt()
     val startableCount = allTasks.count {
         it.status in listOf("PENDING", "PAUSED", "ERROR", "CIRCUIT_BROKEN")
@@ -66,6 +90,124 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // --- Query Section ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = queryGoodsId,
+                onValueChange = { viewModel.updateQueryGoodsId(it) },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("输入商品 Goods ID") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Search
+                ),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        focusManager.clearFocus()
+                        viewModel.queryGoods()
+                    }
+                )
+            )
+
+            Button(
+                onClick = {
+                    focusManager.clearFocus()
+                    viewModel.queryGoods()
+                },
+                enabled = !queryLoading && queryGoodsId.isNotBlank(),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                if (queryLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Search,
+                        contentDescription = "查询",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                Text("查询")
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Error strip
+        AnimatedVisibility(
+            visible = queryError != null,
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFCDD2) // Coral pink
+                )
+            ) {
+                Text(
+                    text = queryError ?: "",
+                    modifier = Modifier.padding(12.dp),
+                    color = Color(0xFFC62828),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        // Result strip
+        AnimatedVisibility(
+            visible = queryResult != null,
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            queryResult?.let { info ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = info.productName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            ScoreChip("总推荐", info.totalRecommend, MaterialTheme.colorScheme.primary)
+                            ScoreChip("普通会员", info.memberRecommend, MaterialTheme.colorScheme.secondary)
+                            ScoreChip("专家", info.expertRecommend, MaterialTheme.colorScheme.tertiary)
+                            ScoreChip("数字认证", info.certRecommend, MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         // Circular progress
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -285,6 +427,23 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) { Text("取消") }
             }
+        )
+    }
+}
+
+@Composable
+private fun ScoreChip(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value.ifEmpty { "-" },
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

@@ -5,6 +5,7 @@ import com.example.demo.data.local.AppDatabase
 import com.example.demo.data.local.ProxyManager
 import com.example.demo.data.remote.AdoreApi
 import com.example.demo.data.remote.ConnectionTracker
+import com.example.demo.data.remote.GoodsInfoApi
 import com.example.demo.data.remote.ProxyConfig
 import com.example.demo.data.remote.createAdoreApi
 import com.example.demo.data.remote.createOkHttpClient
@@ -21,6 +22,7 @@ class App : Application() {
     val taskRepository: TaskRepository by lazy { TaskRepository(database.taskDao()) }
     val logRepository: LogRepository by lazy { LogRepository(database.logEntryDao()) }
     val proxyManager: ProxyManager by lazy { ProxyManager(this) }
+    val goodsInfoApi: GoodsInfoApi by lazy { GoodsInfoApi.create() }
 
     @Volatile
     lateinit var adoreApi: AdoreApi
