@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -37,6 +38,8 @@ import com.example.demo.ui.console.ConsoleScreen
 import com.example.demo.ui.console.ConsoleViewModel
 import com.example.demo.ui.dashboard.DashboardScreen
 import com.example.demo.ui.dashboard.DashboardViewModel
+import com.example.demo.ui.proxy.ProxyScreen
+import com.example.demo.ui.proxy.ProxyViewModel
 import com.example.demo.ui.task.TaskEditDialog
 import com.example.demo.ui.task.TaskListScreen
 import com.example.demo.ui.task.TaskViewModel
@@ -46,9 +49,10 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     @Suppress("DEPRECATION")
     data object Tasks : Screen("tasks", "任务", Icons.Filled.ListAlt)
     data object Console : Screen("console", "控制台", Icons.Filled.Terminal)
+    data object Proxy : Screen("proxy", "代理", Icons.Filled.Settings)
 }
 
-private val screens = listOf(Screen.Dashboard, Screen.Tasks, Screen.Console)
+private val screens = listOf(Screen.Dashboard, Screen.Tasks, Screen.Console, Screen.Proxy)
 
 @Composable
 fun AppNavigation() {
@@ -69,7 +73,11 @@ fun AppNavigation() {
     LaunchedEffect(engineState.isRunning) {
         if (engineState.isRunning) {
             val intent = Intent(context, TaskForegroundService::class.java)
-            context.startForegroundService(intent)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
         } else {
             context.stopService(Intent(context, TaskForegroundService::class.java))
         }
@@ -128,6 +136,10 @@ fun AppNavigation() {
             composable(Screen.Console.route) {
                 val vm: ConsoleViewModel = viewModel()
                 ConsoleScreen(viewModel = vm)
+            }
+            composable(Screen.Proxy.route) {
+                val vm: ProxyViewModel = viewModel()
+                ProxyScreen(viewModel = vm)
             }
         }
     }

@@ -1,6 +1,9 @@
 package com.example.demo.engine
 
+import com.example.demo.App
 import com.example.demo.data.local.entity.LogLevel
+import com.example.demo.data.remote.ConnectionTracker
+import com.example.demo.data.remote.createOkHttpClient
 import com.example.demo.data.local.entity.TaskStatus
 import com.example.demo.data.remote.AdoreApi
 import com.example.demo.data.remote.AdoreResponse
@@ -9,6 +12,7 @@ import com.example.demo.data.repository.TaskRepository
 import com.example.demo.util.JitterUtil
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,9 +47,9 @@ data class LogEvent(
 
 class ExecutionEngine(
     private val taskRepository: TaskRepository,
-    private val logRepository: LogRepository,
-    private val adoreApi: AdoreApi
+    private val logRepository: LogRepository
 ) {
+    private val adoreApi: AdoreApi get() = App.instance.adoreApi
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = ConcurrentHashMap<Long, Job>()
     private val circuitBreaker = CircuitBreaker()
@@ -71,16 +75,18 @@ class ExecutionEngine(
     }
 
     fun stopTask(taskId: Long) {
-        jobs[taskId]?.cancel()
-        jobs.remove(taskId)
-        progress.remove(taskId)
         scope.launch {
-            val task = taskRepository.getById(taskId)
-            if (task != null && task.status == TaskStatus.RUNNING) {
-                taskRepository.updateProgress(taskId, task.completedCount, TaskStatus.PAUSED)
+            val job = jobs.remove(taskId)
+            if (job != null) {
+                job.cancelAndJoin()
+                progress.remove(taskId)
+                val task = taskRepository.getById(taskId)
+                if (task != null && task.status == TaskStatus.RUNNING) {
+                    taskRepository.updateProgress(taskId, task.completedCount, TaskStatus.PAUSED)
+                }
+                updateState()
             }
         }
-        updateState()
     }
 
     fun startAll() {
@@ -94,16 +100,23 @@ class ExecutionEngine(
     }
 
     fun stopAll() {
-        jobs.values.forEach { it.cancel() }
-        jobs.clear()
-        progress.clear()
         scope.launch {
+            val allJobs = jobs.entries.toList()
+            jobs.clear()
+            allJobs.forEach { (_, job) -> job.cancelAndJoin() }
+            progress.clear()
             taskRepository.resetRunningToPaused()
+            updateState()
         }
-        updateState()
     }
 
     fun getCircuitBreakerState() = circuitBreaker.state
+
+    fun emitInfoLog(message: String) {
+        scope.launch {
+            emitLog(LogLevel.INFO, message)
+        }
+    }
 
     fun notifyLogsCleared() {
         scope.launch {
@@ -153,9 +166,16 @@ class ExecutionEngine(
                     taskRepository.updateProgress(taskId, newCount, TaskStatus.RUNNING)
                     progress[taskId] = newCount
                     val body = formatResponseBody(response)
+                    // Lookup fresh exit IP for this specific request
+                    try {
+                        ConnectionTracker.lookupExitIp(
+                            createOkHttpClient(App.instance.proxyManager.loadConfig())
+                        )
+                    } catch (_: Exception) {}
+                    val connInfo = ConnectionTracker.getConnectionInfo()
                     emitLog(
                         LogLevel.SUCCESS,
-                        "第${newCount}/${task.totalCount}次: goods_id=${task.goodsId}\n$body",
+                        "第${newCount}/${task.totalCount}次: goods_id=${task.goodsId} [$connInfo]\n$body",
                         taskId
                     )
                     updateState()
