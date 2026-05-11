@@ -63,8 +63,6 @@ import com.example.demo.data.local.entity.TaskEntity
 fun DashboardScreen(viewModel: DashboardViewModel) {
     val allTasksState = viewModel.allTasks.collectAsStateWithLifecycle(emptyList())
     val allTasks = allTasksState.value
-    val totalLikesState = viewModel.totalLikes.collectAsStateWithLifecycle(0)
-    val totalLikes = totalLikesState.value
     val runningCountState = viewModel.runningTaskCount.collectAsStateWithLifecycle(0)
     val runningCount = runningCountState.value
     val progressState = viewModel.overallProgress.collectAsStateWithLifecycle(0f)
@@ -206,47 +204,18 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // Circular progress
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.size(160.dp),
-                        strokeWidth = 8.dp,
-                        strokeCap = StrokeCap.Round
-                    )
-                    Text(
-                        text = "$progressPercent%",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "总任务进度",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        // Status cards
+        // Progress + Running cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Progress card
             Card(
                 modifier = Modifier.weight(1f),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
                 )
             ) {
                 Row(
@@ -256,18 +225,18 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Icon(
                         Icons.Filled.ThumbUp,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(32.dp)
                     )
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "$totalLikes",
+                            text = "$progressPercent%",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "今日点赞",
+                            text = "总任务进度",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -275,6 +244,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 }
             }
 
+            // Running card
             Card(
                 modifier = Modifier.weight(1f),
                 colors = CardDefaults.cardColors(
