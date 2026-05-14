@@ -3,7 +3,7 @@ package com.example.demo.data.remote
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-private const val BASE_URL = "https://3dds.3ddl.net/"
+private const val BASE_URL = "https://ds.3ddl.net/"
 
 fun createRetrofit(proxyConfig: ProxyConfig = ProxyConfig()): Retrofit {
     return Retrofit.Builder()

@@ -238,7 +238,7 @@ class ExecutionEngine(
         }
     }
 
-    private suspend fun emitLog(level: String, message: String, taskId: Long? = null) {
+    suspend fun emitLog(level: String, message: String, taskId: Long? = null) {
         val event = LogEvent(level = level, message = message, taskId = taskId)
         _logEvents.emit(event)
         logRepository.addLog(level, message, taskId)

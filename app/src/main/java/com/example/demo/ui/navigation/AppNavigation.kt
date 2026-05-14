@@ -1,6 +1,7 @@
 package com.example.demo.ui.navigation
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -27,10 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.demo.App
 import com.example.demo.data.local.entity.TaskEntity
 import com.example.demo.service.TaskForegroundService
@@ -38,6 +41,7 @@ import com.example.demo.ui.console.ConsoleScreen
 import com.example.demo.ui.console.ConsoleViewModel
 import com.example.demo.ui.dashboard.DashboardScreen
 import com.example.demo.ui.dashboard.DashboardViewModel
+import com.example.demo.ui.probe.ProbeScreen
 import com.example.demo.ui.proxy.ProxyScreen
 import com.example.demo.ui.proxy.ProxyViewModel
 import com.example.demo.ui.task.TaskEditDialog
@@ -83,8 +87,11 @@ fun AppNavigation() {
         }
     }
 
+    val isProbeScreen = currentRoute?.startsWith("probe") == true
+
     Scaffold(
         bottomBar = {
+            if (!isProbeScreen) {
             NavigationBar {
                 screens.forEach { screen ->
                     NavigationBarItem(
@@ -103,9 +110,10 @@ fun AppNavigation() {
                     )
                 }
             }
+            } // end if (!isProbeScreen)
         },
         floatingActionButton = {
-            if (currentRoute in listOf(Screen.Dashboard.route, Screen.Tasks.route)) {
+            if (!isProbeScreen && currentRoute in listOf(Screen.Dashboard.route, Screen.Tasks.route)) {
                 FloatingActionButton(onClick = {
                     editingTaskId = null
                     showTaskDialog = true
@@ -122,7 +130,21 @@ fun AppNavigation() {
         ) {
             composable(Screen.Dashboard.route) {
                 val vm: DashboardViewModel = viewModel()
-                DashboardScreen(viewModel = vm)
+                DashboardScreen(
+                    viewModel = vm,
+                    onNavigateToProbe = { goodsId ->
+                        navController.navigate("probe/${Uri.encode(goodsId)}")
+                    }
+                )
+            }
+            composable(
+                "probe/{goodsId}",
+                arguments = listOf(navArgument("goodsId") { type = NavType.StringType; defaultValue = "" })
+            ) { backStackEntry ->
+                ProbeScreen(
+                    initialGoodsId = backStackEntry.arguments?.getString("goodsId") ?: "",
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable(Screen.Tasks.route) {
                 TaskListScreen(

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
@@ -60,7 +61,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.demo.data.local.entity.TaskEntity
 
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel) {
+fun DashboardScreen(
+    viewModel: DashboardViewModel,
+    onNavigateToProbe: (String) -> Unit = {}
+) {
     val allTasksState = viewModel.allTasks.collectAsStateWithLifecycle(emptyList())
     val allTasks = allTasksState.value
     val runningCountState = viewModel.runningTaskCount.collectAsStateWithLifecycle(0)
@@ -319,6 +323,22 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 Spacer(Modifier.width(4.dp))
                 Text("清除日志", style = MaterialTheme.typography.labelLarge)
             }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Advanced features entry
+        Button(
+            onClick = { onNavigateToProbe(queryGoodsId) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.tertiary
+            )
+        ) {
+            Icon(Icons.Filled.Speed, contentDescription = null, Modifier.size(20.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("高级功能 · 并发探测器", style = MaterialTheme.typography.labelLarge)
         }
 
         Spacer(Modifier.height(24.dp))

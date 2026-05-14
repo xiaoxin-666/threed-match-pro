@@ -62,7 +62,7 @@ function updateLog(text) {
 // 发送请求的核心函数
 function sendRequest() {
     try {
-        let url = "https://3dds.3ddl.net//index.php?ctl=Goods_Goods&met=admireGoods&typ=json";
+        let url = "https://ds.3ddl.net//index.php?ctl=Goods_Goods&met=admireGoods&typ=json";
         let body = "k=AHICJwJoVSVRAwBuUDUCbgRlBDQ1JMwdiVWRRMVEmU2FXOAk%2BD2lSPlYEB2laP1o2BWYGJ1QkVmIDa1dzU11RaQBjAmkCPQ%3D%3D&u=279964&goods_id=" + ui.goods_id.text();
         
         let ret = http.request(url, {
