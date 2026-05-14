@@ -166,12 +166,14 @@ class ExecutionEngine(
                     taskRepository.updateProgress(taskId, newCount, TaskStatus.RUNNING)
                     progress[taskId] = newCount
                     val body = formatResponseBody(response)
-                    // Lookup fresh exit IP for this specific request
-                    try {
-                        ConnectionTracker.lookupExitIp(
-                            createOkHttpClient(App.instance.proxyManager.loadConfig())
-                        )
-                    } catch (_: Exception) {}
+                    // Lookup exit IP every 30 successful requests
+                    if (newCount % 30 == 0 || newCount == task.totalCount) {
+                        try {
+                            ConnectionTracker.lookupExitIp(
+                                createOkHttpClient(App.instance.proxyManager.loadConfig())
+                            )
+                        } catch (_: Exception) {}
+                    }
                     val connInfo = ConnectionTracker.getConnectionInfo()
                     emitLog(
                         LogLevel.SUCCESS,

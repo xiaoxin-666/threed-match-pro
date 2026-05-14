@@ -34,10 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.demo.data.local.entity.TaskEntity
 import com.example.demo.data.local.entity.TaskStatus
@@ -52,8 +55,19 @@ fun TaskListScreen(
     val engineStateState = viewModel.engineState.collectAsStateWithLifecycle()
     val engineState = engineStateState.value
     var deleteConfirmId by remember { mutableStateOf<Long?>(null) }
+    val bgSeed = remember { kotlin.random.Random.nextInt() }
 
-    if (tasks.isEmpty()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = "https://imgapi.cn/api.php?zd=mobile&fl=meizi&_t=$bgSeed",
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.7f),
+            contentScale = ContentScale.Crop
+        )
+
+        if (tasks.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -101,6 +115,7 @@ fun TaskListScreen(
             }
         )
     }
+    }
 }
 
 @Composable
@@ -121,9 +136,9 @@ private fun TaskCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
             } else {
-                MaterialTheme.colorScheme.surface
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
             }
         )
     ) {

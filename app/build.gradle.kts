@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.demo"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -74,6 +74,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+
+    // Coil image loading
+    implementation(libs.coil.compose)
 
     // Existing
     implementation(libs.androidx.core.ktx)

@@ -84,10 +84,10 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
         // --- Query Section ---
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -343,7 +343,10 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             )
             LazyColumn {
                 items(items = allTasks.take(10), key = { t: TaskEntity -> t.id }) { task ->
-                    MiniTaskCard(task)
+                    MiniTaskCard(
+                        task = task,
+                        onQuery = { viewModel.queryGoodsById(task.goodsId) }
+                    )
                 }
             }
         }
@@ -419,12 +422,12 @@ private fun ScoreChip(label: String, value: String, color: Color) {
 }
 
 @Composable
-private fun MiniTaskCard(task: TaskEntity) {
+private fun MiniTaskCard(task: TaskEntity, onQuery: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -438,6 +441,14 @@ private fun MiniTaskCard(task: TaskEntity) {
                 )
             }
             StatusChip(task.status)
+            IconButton(onClick = onQuery) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = "查询商品",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

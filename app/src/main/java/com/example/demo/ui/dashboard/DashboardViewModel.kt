@@ -56,6 +56,11 @@ class DashboardViewModel : ViewModel() {
             _queryError.value = "请输入商品ID"
             return
         }
+        queryGoodsById(id)
+    }
+
+    fun queryGoodsById(id: String) {
+        queryGoodsId.value = id
         viewModelScope.launch {
             _queryLoading.value = true
             _queryError.value = null
