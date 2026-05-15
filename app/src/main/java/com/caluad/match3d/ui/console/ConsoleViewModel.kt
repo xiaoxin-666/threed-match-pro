@@ -23,7 +23,7 @@ class ConsoleViewModel : ViewModel() {
         viewModelScope.launch {
             logRepo.observeRecent().collect { entities ->
                 if (_logs.value.isEmpty() && entities.isNotEmpty()) {
-                    _logs.value = entities.reversed().map {
+                    _logs.value = entities.map {
                         LogEvent(it.timestamp, it.level, it.message, it.taskId)
                     }
                 }

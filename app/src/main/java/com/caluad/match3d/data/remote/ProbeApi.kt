@@ -44,13 +44,11 @@ class ProbeApi(private val client: OkHttpClient) {
             val requestBuilder = Request.Builder()
                 .url(url)
                 .post(body)
-                .header("content-length", bodyString.toByteArray(Charsets.UTF_8).size.toString())
                 .header("accept", "application/json")
                 .header("origin", "https://m3dds.3ddl.net")
                 .header("user-agent", PROBE_USER_AGENT)
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("referer", referer)
-                .header("accept-encoding", "gzip, deflate")
                 .header("accept-language", "zh-CN,en-US;q=0.9")
                 .header("x-requested-with", "mark.via")
 
