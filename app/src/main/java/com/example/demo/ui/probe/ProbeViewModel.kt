@@ -9,6 +9,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -89,47 +90,21 @@ class ProbeViewModel : ViewModel() {
 
         viewModelScope.launch {
             val engine = App.instance.executionEngine
-            engine.emitLog(LogLevel.INFO, "[${mode.label}] 开始并发${mode.actionLabel} goods_id=$goodsId, 并发数=$concurrency")
+            val isConcurrent = mode == ProbeMode.ADMIRE
+            engine.emitLog(LogLevel.INFO, "[${mode.label}] 开始${mode.actionLabel} goods_id=$goodsId, 次数=$concurrency")
 
-            val results = List(concurrency) { index ->
-                async(Dispatchers.IO) {
-                    val startTime = System.currentTimeMillis()
-                    val order = sentCounter.incrementAndGet()
-                    _state.value = _state.value.copy(sentCount = order)
-
-                    try {
-                        val response = when (mode) {
-                            ProbeMode.ADMIRE -> probeApi.probeAdmire(goodsId)
-                            ProbeMode.CANCEL_ADMIRE -> probeApi.cancelAdmire(goodsId)
-                        }
-                        val elapsed = System.currentTimeMillis() - startTime
-                        val body = formatProbeBody(response)
-                        val isSuccess = response.msg.equals("success", ignoreCase = true) ||
-                                response.info.contains("成功", ignoreCase = true)
-                        if (isSuccess) {
-                            val sc = successCounter.incrementAndGet()
-                            _state.value = _state.value.copy(successCount = sc)
-                        }
-                        ProbeResult(
-                            index = index + 1,
-                            success = isSuccess,
-                            msg = response.msg.ifEmpty { response.info },
-                            info = response.info,
-                            elapsedMs = elapsed,
-                            body = body
-                        )
-                    } catch (e: Exception) {
-                        val elapsed = System.currentTimeMillis() - startTime
-                        ProbeResult(
-                            index = index + 1,
-                            success = false,
-                            msg = "请求失败",
-                            info = e.message ?: "未知错误",
-                            elapsedMs = elapsed
-                        )
+            val results = if (isConcurrent) {
+                List(concurrency) { index ->
+                    async(Dispatchers.IO) {
+                        executeOneRequest(mode, goodsId, index)
                     }
+                }.awaitAll()
+            } else {
+                List(concurrency) { index ->
+                    if (index > 0) delay(1000)
+                    executeOneRequest(mode, goodsId, index)
                 }
-            }.awaitAll()
+            }
 
             val sc = successCounter.get()
             results.forEach { r ->
@@ -142,6 +117,44 @@ class ProbeViewModel : ViewModel() {
                 isRunning = false,
                 completed = true,
                 results = results
+            )
+        }
+    }
+
+    private suspend fun executeOneRequest(mode: ProbeMode, goodsId: String, index: Int): ProbeResult {
+        val startTime = System.currentTimeMillis()
+        val order = sentCounter.incrementAndGet()
+        _state.value = _state.value.copy(sentCount = order)
+
+        return try {
+            val response = when (mode) {
+                ProbeMode.ADMIRE -> probeApi.probeAdmire(goodsId)
+                ProbeMode.CANCEL_ADMIRE -> probeApi.cancelAdmire(goodsId)
+            }
+            val elapsed = System.currentTimeMillis() - startTime
+            val body = formatProbeBody(response)
+            val isSuccess = response.msg.equals("success", ignoreCase = true) ||
+                    response.info.contains("成功", ignoreCase = true)
+            if (isSuccess) {
+                val sc = successCounter.incrementAndGet()
+                _state.value = _state.value.copy(successCount = sc)
+            }
+            ProbeResult(
+                index = index + 1,
+                success = isSuccess,
+                msg = response.msg.ifEmpty { response.info },
+                info = response.info,
+                elapsedMs = elapsed,
+                body = body
+            )
+        } catch (e: Exception) {
+            val elapsed = System.currentTimeMillis() - startTime
+            ProbeResult(
+                index = index + 1,
+                success = false,
+                msg = "请求失败",
+                info = e.message ?: "未知错误",
+                elapsedMs = elapsed
             )
         }
     }

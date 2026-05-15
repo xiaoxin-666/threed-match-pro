@@ -143,43 +143,36 @@ class ExecutionEngine(
                         goodsId = task.goodsId
                     )
 
+                    val body = formatResponseBody(response)
+
                     if (response.info.contains("操作频繁")) {
                         circuitBreaker.recordFailure()
-                        val body = formatResponseBody(response)
                         emitLog(LogLevel.ERROR, "操作频繁: 服务器拒绝请求\n$body", taskId)
                         break
                     }
 
-                    if (response.status != 1 && response.info.isNotEmpty() && !response.info.contains(
-                            "成功",
-                            ignoreCase = true
+                    if (response.status == 200) {
+                        circuitBreaker.recordSuccess()
+                        val newCount = i + 1
+                        taskRepository.updateProgress(taskId, newCount, TaskStatus.RUNNING)
+                        progress[taskId] = newCount
+                        // Lookup exit IP every 30 successful requests
+                        if (newCount % 30 == 0 || newCount == task.totalCount) {
+                            try {
+                                ConnectionTracker.lookupExitIp(
+                                    createOkHttpClient(App.instance.proxyManager.loadConfig())
+                                )
+                            } catch (_: Exception) {}
+                        }
+                        val connInfo = ConnectionTracker.getConnectionInfo()
+                        emitLog(
+                            LogLevel.SUCCESS,
+                            "第${newCount}/${task.totalCount}次: goods_id=${task.goodsId} [$connInfo]\n$body",
+                            taskId
                         )
-                    ) {
-                        circuitBreaker.recordFailure()
-                        val body = formatResponseBody(response)
-                        emitLog(LogLevel.ERROR, "服务器错误: status=${response.status}\n$body", taskId)
-                        break
+                    } else {
+                        emitLog(LogLevel.INFO, "第${i + 1}次请求: goods_id=${task.goodsId}\n$body", taskId)
                     }
-
-                    circuitBreaker.recordSuccess()
-                    val newCount = i + 1
-                    taskRepository.updateProgress(taskId, newCount, TaskStatus.RUNNING)
-                    progress[taskId] = newCount
-                    val body = formatResponseBody(response)
-                    // Lookup exit IP every 30 successful requests
-                    if (newCount % 30 == 0 || newCount == task.totalCount) {
-                        try {
-                            ConnectionTracker.lookupExitIp(
-                                createOkHttpClient(App.instance.proxyManager.loadConfig())
-                            )
-                        } catch (_: Exception) {}
-                    }
-                    val connInfo = ConnectionTracker.getConnectionInfo()
-                    emitLog(
-                        LogLevel.SUCCESS,
-                        "第${newCount}/${task.totalCount}次: goods_id=${task.goodsId} [$connInfo]\n$body",
-                        taskId
-                    )
                     updateState()
                 } catch (e: HttpException) {
                     circuitBreaker.recordFailure()

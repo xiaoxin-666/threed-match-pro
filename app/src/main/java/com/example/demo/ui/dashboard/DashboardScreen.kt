@@ -456,7 +456,7 @@ private fun MiniTaskCard(task: TaskEntity, onQuery: () -> Unit) {
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = "${task.completedCount}/${task.totalCount}",
+                    text = "成功 ${task.completedCount}/${task.totalCount}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
