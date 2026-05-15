@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">3D Match Pro</string>
+    <string name="app_name">3D助手</string>
     <string name="channel_task_execution">任务执行</string>
-    <string name="notification_running">3D Match Pro 正在运行</string>
+    <string name="notification_running">3D助手正在运行</string>
     <string name="tab_dashboard">控制面板</string>
     <string name="tab_tasks">任务</string>
     <string name="tab_console">控制台</string>

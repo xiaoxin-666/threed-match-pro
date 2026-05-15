@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**3D Match Pro** (3D大赛助手), a commodity popularity management tool that sends automated admiration requests to a target API. The `maomi/main.js` AutoJS script is the prototype being replaced; `maomi/4.md` is the probe feature design document. Reference request captures live in `maomi/1/`, `maomi/2/`, `maomi/3/`.
+**3D助手** (3D Match Pro), a commodity popularity management tool that sends automated admiration requests to a target API. The `maomi/main.js` AutoJS script is the prototype being replaced; `maomi/4.md` is the probe feature design document. Reference request captures live in `maomi/1/`, `maomi/2/`, `maomi/3/`.
 
 ## Build & Test
 
@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew assembleDebug          # Build APK
 ./gradlew installDebug           # Install on device/emulator
 ./gradlew test                   # Run unit tests (JVM)
-./gradlew test --tests "com.example.demo.ExampleUnitTest"  # Single test
+./gradlew test --tests "com.caluad.match3d.ExampleUnitTest"  # Single test
 ./gradlew connectedAndroidTest   # Instrumented tests (need device)
 ./gradlew clean                  # Clean build
 ```
@@ -49,7 +49,7 @@ class App : Application() {
 | `data/local/entity/` | Room entities: `TaskEntity`, `LogEntryEntity` |
 | `data/local/dao/` | Room DAOs: `TaskDao`, `LogEntryDao` |
 | `data/local/` | `AppDatabase` (Room DB), `ProxyManager` (SharedPreferences wrapper) |
-| `data/remote/` | `AdoreApi` (Retrofit interface for admiration POSTs, base `https://ds.3ddl.net/`), `AdoreResponse` (Gson-mapped response), `ProbeApi` (raw OkHttp class for probe/cancel-admire requests matching captured mobile headers), `ProbeResponse` (response with `msg` field), `GoodsInfoApi` (OkHttp-based goods metadata scraper), `GoodsInfo` (data class: product name, thumbnail URL, 4 recommend stats), `HttpClient` / `NetworkModule` (OkHttp factory + Retrofit builder), `UserAgentPool`, `ProxyConfig`, `ConnectionTracker` |
+| `data/remote/` | `AdoreApi` (Retrofit interface for admiration POSTs, base `https://3dds.3ddl.net/`), `AdoreResponse` (Gson-mapped response), `ProbeApi` (raw OkHttp class for probe/cancel-admire requests matching captured mobile headers), `ProbeResponse` (response with `msg` field), `GoodsInfoApi` (OkHttp-based goods metadata scraper), `GoodsInfo` (data class: product name, thumbnail URL, 4 recommend stats), `HttpClient` / `NetworkModule` (OkHttp factory + Retrofit builder), `UserAgentPool`, `ProxyConfig`, `ConnectionTracker` |
 | `data/repository/` | `TaskRepository`, `LogRepository` — thin wrappers over DAOs |
 | `engine/` | `ExecutionEngine` (core task loop), `CircuitBreaker` (failure backoff with OPEN/CLOSED/HALF_OPEN states) |
 | `service/` | `TaskForegroundService` — foreground service bound to engine running state |
@@ -68,7 +68,7 @@ class App : Application() {
 1. User creates a task (goodsId + count + interval) via `TaskEditDialog`; `GoodsInfoApi.fetchGoodsInfo()` fetches product name and thumbnail from the 3D site
 2. Task persisted to Room via `TaskRepository`
 3. `ExecutionEngine.startTask()` spawns a coroutine (`SupervisorJob` + `Dispatchers.IO`) per task
-4. Each coroutine loops: POST to `ds.3ddl.net//index.php?ctl=Goods_Goods&met=admireGoods&typ=json` with form fields `k`, `u`, `goods_id`
+4. Each coroutine loops: POST to `3dds.3ddl.net//index.php?ctl=Goods_Goods&met=admireGoods&typ=json` with form fields `k`, `u`, `goods_id`
 5. Response handling: if `info` contains `"操作频繁"` → break; if body `status == 200` → increment `completedCount` (success); if `status != 200` → log INFO but don't count, continue loop
 6. Every 30 successful (status==200) requests, `ConnectionTracker.lookupExitIp()` checks the exit IP
 7. Progress/logs persisted to Room; UI observes `StateFlow`/`SharedFlow` from the engine
@@ -76,7 +76,7 @@ class App : Application() {
 **Probe / Cancel Admire (高级功能):**
 1. Accessed from Dashboard via "高级功能" button, passing current goods ID
 2. Mode toggle switches between ADMIRE (concurrent) and CANCEL_ADMIRE (sequential, 1s delay)
-3. `ProbeApi` uses raw OkHttp (not Retrofit) with exact captured mobile headers (Android Pixel 5 UA, `mark.via`, `mds.3ddl.net` origin, no cookies)
+3. `ProbeApi` uses raw OkHttp (not Retrofit) with exact captured mobile headers (Android Pixel 5 UA, `mark.via`, `m3dds.3ddl.net` origin, no cookies)
 4. ADMIRE: `met=admireGoods`; CANCEL_ADMIRE: `met=canleAdmireGoods` with different referer
 5. Probe logs flow to the shared Console via `ExecutionEngine.emitLog()` (now public)
 
@@ -100,9 +100,9 @@ Four bottom-nav tabs + one overlay route:
 - **Proxy**: Proxy config is stored in SharedPreferences via `ProxyManager`. Calling `App.recreateAdoreApi()` rebuilds the OkHttp client and Retrofit instance with the new proxy settings — no app restart needed. Supports HTTP and SOCKS5 proxy types.
 - **SOCKS5 proxy auth**: Avoid setting `java.net.Authenticator.setDefault()` for SOCKS5 proxies — their authenticator callbacks run on native socket threads where uncaught exceptions crash the app. Only HTTP proxies use preemptive proxy authentication.
 - **Connection tracking**: `ConnectionTracker.lookupExitIp()` queries `api.ipify.org` through a fresh OkHttp client (bypassing proxy) to determine the actual exit IP used. Displayed alongside proxy info in success logs.
-- **HTTPS / certificates**: The manifest sets `usesCleartextTraffic="false"` and references `network_security_config.xml` to relax certificate validation for the target server (`ds.3ddl.net`). If you hit SSL handshake failures, check that file.
+- **HTTPS / certificates**: The manifest sets `usesCleartextTraffic="false"` and references `network_security_config.xml` to relax certificate validation for the target server (`3dds.3ddl.net`). If you hit SSL handshake failures, check that file.
 - **Probe API (`ProbeApi`)**: Uses raw OkHttp (not Retrofit) for full control over header order/exact values matching captured mobile requests. ADMIRE mode fires concurrently via `async`/`awaitAll`; CANCEL_ADMIRE mode fires sequentially with 1s delay. Probe logs are emitted to the shared Console via `ExecutionEngine.emitLog()`.
-- **Base URL**: Main API and probe both use `https://ds.3ddl.net` (changed from `3dds.3ddl.net`).
+- **Base URL**: Main API and probe both use `https://3dds.3ddl.net`.
 
 ## Filesystem Reference
 
@@ -114,6 +114,6 @@ Four bottom-nav tabs + one overlay route:
 | `maomi/2/` | Captured mobile-origin admire request (mark.via, no cookies) |
 | `maomi/3/` | Captured mobile-origin cancel-admire request |
 | `gradle/libs.versions.toml` | All dependency versions |
-| `app/build.gradle.kts` | App module build config (namespace `com.example.demo`, compileSdk 36, minSdk 24) |
+| `app/build.gradle.kts` | App module build config (namespace `com.caluad.match3d`, compileSdk 36, minSdk 24) |
 | `app/src/main/AndroidManifest.xml` | Manifest: permissions, Application class, Activity, foreground Service |
 | `app/src/main/res/xml/network_security_config.xml` | HTTPS certificate trust configuration |

@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.demo"
+    namespace = "com.caluad.match3d"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.demo"
+        applicationId = "com.caluad.match3d"
         minSdk = 24
         targetSdk = 36
         versionCode = 2
